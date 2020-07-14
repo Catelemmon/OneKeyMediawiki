@@ -1,0 +1,6 @@
+/statics/
+/.idea/
+
+*.tag.gz
+app
+installer
