@@ -1,0 +1,4 @@
+#!/bin/sh
+go build install.go
+tar -czvf installer.tar.gz install statics
+rm -rf install
