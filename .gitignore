@@ -1,6 +1,6 @@
 /statics/
 /.idea/
 
-*.tag.gz
+*.tar.gz
 app
 installer
