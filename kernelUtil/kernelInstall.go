@@ -1,4 +1,4 @@
-package kernalUtil
+package kernelUtil
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	exec2 "os/exec"
+	"os/user"
 	"regexp"
 	"strings"
 )
@@ -41,20 +42,27 @@ func InstallKernel(execDir string){
 	if si.KernelAllow{
 		return
 	}
+	currentUser, err := user.Current()
+	if err != nil{
+		panic("cannot get current user")
+	}
+	if currentUser.Uid != "0" {
+		panic("请使用root用户执行本程序！")
+	}
 	var updatekernel string
-	fmt.Printf("是否需要更新内核文件到4.4.217[Y/n]:")
+	fmt.Printf("是否需要更新内核文件到4.4.217[Y/n]:\n")
 	fmt.Scanln(updatekernel)
 	if strings.TrimSpace(updatekernel) == "n"{
 		os.Exit(1)
 	}
-	cmd := exec2.Command("bash","-c", " sudo rpm -ivh kernel-lt-devel-4.4.217-1.el6.elrepo.x86_64.rpm")
+	cmd := exec2.Command("rpm","-ivh", "kernel-lt-devel-4.4.217-1.el6.elrepo.x86_64.rpm")
 	cmd.Dir = execDir
 	out, err := cmd.Output()
 	if err != nil {
-		fmt.Printf("内核更新失败， 错误信息如下!\n%v", string(out))
+		fmt.Printf("内核更新失败， 错误信息如下!\n output: %v\n error: %v\n", string(out), err)
 		os.Exit(3)
 	}
-	cmd = exec2.Command("bash", "-c", "sudo rpm -ivh kernel-lt-4.4.217-1.el6.elrepo.x86_64.rpm")
+	cmd = exec2.Command("rpm", "-ivh", "kernel-lt-4.4.217-1.el6.elrepo.x86_64.rpm")
 	cmd.Dir = execDir
 	_, err = cmd.Output()
 	if err != nil {

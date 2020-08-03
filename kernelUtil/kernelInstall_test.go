@@ -1,4 +1,4 @@
-package kernalUtil
+package kernelUtil
 
 import "testing"
 
