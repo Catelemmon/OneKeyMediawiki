@@ -9,7 +9,7 @@ func TestKernelCheck(t *testing.T) {
 
 func TestCheckKernel(t *testing.T){
 	sysInfo := getSystemInfoCheck()
-	err := checkKernel(sysInfo)
+	err := checkSysMeta(sysInfo)
 	if err != nil{
 		t.Fatal(err)
 	}

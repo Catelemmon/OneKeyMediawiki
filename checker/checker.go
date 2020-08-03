@@ -13,11 +13,17 @@ import (
 type SupportInfo struct {
 	hasChecked    bool
 	KernelAllow   bool `comment:"内核是否允许"`
+	SystemVendor  string `comment:"系统供应商"`
+	SystemVersion string `comment:"系统版本号"`
+	SysArch       string `comment:"系统架构"`
 	IpTablesAllow bool `comment:"iptable版本是否支持"`
 	HasApache     bool `comment:"是否有apache服务器"`
 	HasNginx      bool `comment:"是否有nginx服务器"`
 	HasDocker     bool `comment:"是否有docker"`
-	GrubOption    string `comment:"启动项信息"`
+	DockerVersion string `comment:"docker的版本号"`
+	HasDockerCompose bool `comment:"是否有docker-compose"`
+	DockerComposeVersion string `comment:"docker-compose的版本"`
+	//GrubOption    string `comment:"启动项信息"`
 	HasGit        bool `comment:"是否有git"`
 	GitAllow      bool `comment:"git版本是否符合需求"`
 	HasXz         bool `comment:"是否有xz"`
@@ -28,6 +34,8 @@ type SupportInfo struct {
 	PHPAllow      bool `comment:"php版本是否符合要求"`
 	HasNode       bool `comment:"是否有nodejs"`
 	PackageAllow  bool `comment:"其他一系列包的支持情况"`
+	HasSystemd    bool `comment:"是否由systemd管理守护进程"`
+	HasService    bool `comment:"是否service命令管理开机脚本控制守护进程"`
 }
 
 var supportInfo *SupportInfo
@@ -40,7 +48,7 @@ func  NewSupportInfo() *SupportInfo{
 			HasApache:     false,
 			HasNginx:      false,
 			HasDocker:     false,
-			GrubOption:    "",
+			//GrubOption:    "",
 			HasGit:        false,
 			GitAllow:      false,
 			HasXz:         false,
@@ -67,11 +75,12 @@ func getSystemInfoCheck() sysinfo.SysInfo{
 
 func (si *SupportInfo) GetSupportInfo() error {
 	if (*supportInfo).hasChecked{
+
 		return nil
 	}
 	currSysInfo := getSystemInfoCheck()
 	var err error
-	err = checkKernel(currSysInfo)
+	err = checkSysMeta(currSysInfo)
 	if err != nil {
 		return err
 	}
@@ -97,19 +106,35 @@ func (si *SupportInfo) GetSupportInfo() error {
 	}
 	err = checkPHP()
 	if err != nil{
-		return nil
+		return err
 	}
 	err = checkHasNode()
 	if err != nil {
-		return nil
+		return err
 	}
 	err = checkPackage()
 	if err != nil{
-		return nil
+		return err
 	}
 	err = checkMysql()
 	if err != nil {
-		return nil
+		return err
+	}
+	err = checkSystemd()
+	if err != nil {
+		return err
+	}
+	err = checkService()
+	if err != nil{
+		return err
+	}
+	err = checkDocker()
+	if err != nil {
+		return err
+	}
+	err = checkDockerCompose()
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -127,8 +152,8 @@ func (si *SupportInfo) ShowSupportInfo(){
 				outInfo = "是"
 			} else if itemKnd == reflect.Bool && !val.Field(i).Bool(){
 				outInfo = "否"
-			} else if itemKnd == reflect.String{
-				continue
+			}  else if itemKnd == reflect.String{
+				outInfo = val.Field(i).String()
 			}
 			tag := typ.Field(i).Tag.Get("comment")
 			if tag != ""{
@@ -141,18 +166,22 @@ func (si *SupportInfo) ShowSupportInfo(){
 	<- waitChan
 }
 
-func checkKernel(info sysinfo.SysInfo) error{
+func checkSysMeta(info sysinfo.SysInfo) error{
 
 	kernelString := info.Kernel.Release
 	version, err := utils.VersionExtract(kernelString)
 	if  err != nil {
 		(*supportInfo).KernelAllow = false
+		supportInfo.KernelAllow = false
 	}
 	if utils.VersionAllow(version, "3.10"){
 		(*supportInfo).KernelAllow = true
 	} else{
 		(*supportInfo).KernelAllow = false
 	}
+	(*supportInfo).SystemVendor = info.OS.Vendor
+	(*supportInfo).SystemVersion = info.OS.Version
+	(*supportInfo).SysArch = info.OS.Architecture
 	return nil
 }
 
@@ -261,15 +290,17 @@ func checkMysql() error{
 	} else {
 		(*supportInfo).HasMysql = false
 	}
-	ver, err := utils.CommandVersion( "mysqld")
-	if err != nil {
-		fmt.Println("mysql version is not supported")
-		return err
-	}
-	if utils.VersionAllow(ver, "5.5.8"){
-		(*supportInfo).MysqlAllow = true
-	} else {
-		(*supportInfo).MysqlAllow = false
+	if supportInfo.HasMysql{
+		ver, err := utils.CommandVersion( "mysqld")
+		if err != nil {
+			fmt.Println("mysql version is not supported")
+			return err
+		}
+		if utils.VersionAllow(ver, "5.5.8"){
+			(*supportInfo).MysqlAllow = true
+		} else {
+			(*supportInfo).MysqlAllow = false
+		}
 	}
 	return nil
 }
@@ -277,5 +308,56 @@ func checkMysql() error{
 func checkPackage() error{
 	// TODO：add packages check
 	(*supportInfo).PackageAllow = false
+	return nil
+}
+
+func checkSystemd() error{
+	if utils.HasCommand("systemd"){
+		(*supportInfo).HasSystemd = true
+	} else {
+		(*supportInfo).HasSystemd = false
+	}
+	return nil
+}
+
+func checkService() error{
+	if utils.HasCommand("service") {
+		(*supportInfo).HasService = true
+	} else {
+		(*supportInfo).HasSystemd = false
+	}
+	return nil
+}
+
+func checkDocker() error{
+	if utils.HasCommand("docker") {
+		(*supportInfo).HasDocker = true
+	} else {
+		(*supportInfo).HasDocker = false
+	}
+	if supportInfo.HasDocker{
+		var err error
+		(*supportInfo).DockerVersion, err = utils.CommandVersion("docker")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func checkDockerCompose() error{
+	if utils.HasCommand("docker-compose") {
+		(*supportInfo).HasDockerCompose = true
+	} else {
+		(*supportInfo).HasDockerCompose = false
+	}
+	if supportInfo.HasDockerCompose{
+		var err error
+		(*supportInfo).DockerComposeVersion, err = utils.CommandVersion("docker-compose")
+		if err != nil{
+			return err
+		}
+	}
 	return nil
 }
