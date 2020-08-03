@@ -1,4 +1,4 @@
 #!/bin/sh
 go build install.go
-tar -czvf installer.tar.gz install statics
+tar -czvf installer.tar.gz install statics README.md
 rm -rf install
