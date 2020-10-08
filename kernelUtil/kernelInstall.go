@@ -3,6 +3,7 @@ package kernelUtil
 import (
 	"fmt"
 	"github.com/Catelemmon/oneKeyMediawiki/checker"
+	"github.com/Catelemmon/oneKeyMediawiki/utils"
 	"io/ioutil"
 	"os"
 	exec2 "os/exec"
@@ -75,11 +76,15 @@ func InstallKernel(execDir string){
 func ChangeLaunchOption() error{
 	grubConf := "/etc/grub.cfg"
 	fmt.Println("正在修改内核启动项")
-	_, err := os.Stat(grubConf)
-	if err != nil || os.IsNotExist(err){
-		return err
+
+	if err, isExist := utils.FileExist(grubConf); err != nil && !isExist{
+		if err, isExist = utils.FileExist("/boot/grub/grub.conf"); err == nil && isExist{
+			grubConf = "/boot/grub/grub.conf"
+		} else {
+			return err
+		}
 	}
-	cnt, err := ioutil.ReadFile(grubConf)
+ 	cnt, err := ioutil.ReadFile(grubConf)
 	if err != nil{
 		return nil
 	}

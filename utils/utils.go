@@ -4,8 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
+	"os"
 	exec2 "os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -69,3 +72,28 @@ func HasFile(checkDir string, filename string) bool{
 	return false
 }
 
+func VerBEThan(srcVer string, tgtVer string) bool{
+	srcSubVer := strings.Split(srcVer, ".")
+	tgtSubVer := strings.Split(tgtVer, ".")
+	for i := 0; math.Min(float64(len(srcSubVer)), float64(len(tgtSubVer))) > float64(i); i++{
+		v1, _ := strconv.Atoi(srcSubVer[i])
+		v2, _ := strconv.Atoi(tgtSubVer[i])
+		if v1 > v2{
+			return true
+
+		} else {
+			continue
+		}
+	}
+	return len(srcSubVer) > len(tgtSubVer)
+}
+
+func FileExist(file string) (error, bool){
+	if _, err := os.Stat(file); err == nil{
+		return nil, true
+	} else if os.IsNotExist(err){
+		return nil, false
+	} else{
+		return err, false
+	}
+}

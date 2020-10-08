@@ -1,10 +1,12 @@
 package wikiUtil
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"github.com/Catelemmon/oneKeyMediawiki/checker"
 	"github.com/Catelemmon/oneKeyMediawiki/utils"
+	"io"
 	"io/ioutil"
 	"os"
 	exec2 "os/exec"
@@ -95,7 +97,58 @@ func LoadDockerImage(imgDir string) error{
 			}
 		}
 	}
+	return nil
+}
 
+func InitWiki(adminEmail, adminName, adminPassword, dbName, dbUser, dbPassword string)  {
+
+}
+
+func RenderEnv(envFile,
+	adminEmail,
+	secretKey,
+	upgradeKey,
+	dbName,
+	dbUser,
+	dbPassword string,
+	overwrite bool) error{
+	envStore := make(map[string]string)
+
+	envStore["EMERGENCY_CONTACT"] = adminEmail
+	envStore["PASSWORD_SENDER"] = adminEmail
+	envStore["SECRET_KEY"] = secretKey
+	envStore["UPGRADE_KEY"] = upgradeKey
+	envStore["DB_NAME"] = dbName
+	envStore["DB_USER"] = dbUser
+	envStore["DB_PASSWORD"] = dbPassword
+
+	if err, envExist := utils.FileExist(envFile); err == nil && envExist && !overwrite{
+		envFi, _ := os.Open(envFile)
+		reader := bufio.NewReader(envFi)
+		for true {
+			bl, _, err := reader.ReadLine()
+			if err == io.EOF{
+				break
+			}
+			line := string(bl)
+			pieces := strings.Split(line, "=")
+			envName, envValue := pieces[0], pieces[1]
+			envStore[envName] = envValue // add secret key upgrade key
+		}
+	}
+	cntLine := make([]string, 0, 7)
+	for key, item := range envStore{
+		cntLine = append(cntLine, key+"="+item)
+	}
+	envContent := strings.Join(cntLine, "\n")
+	envFi, err := os.OpenFile(envFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil{
+		return err
+	}
+	_, err = envFi.Write([]byte(envContent))
+	if err != nil{
+		return err
+	}
 	return nil
 }
 
