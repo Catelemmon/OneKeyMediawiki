@@ -1,0 +1,19 @@
+mediawiki:
+  image: mediawiki:latest
+  restart: always
+  volumes:
+    - ./images:/var/www/html/images
+#    - ./LocalSettings.php:/var/www/html/LocalSettings.php
+  net: "host"
+
+database:
+  image: mariadb:latest
+  restart: always
+  environment:
+    MYSQL_DATABASE: my_wiki
+    MYSQL_USER: wikiuser
+    MYSQL_PASSWORD: example
+    MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+  volumes:
+    - ./dbData/mariadb:/var/lib/mysql
+  net: "host"
