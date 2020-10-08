@@ -1,6 +1,13 @@
-/statics/
 /.idea/
 
 *.tar.gz
 app
 installer
+
+*.rpm
+*.tar
+*.tgz
+*.gz
+*.zip
+*.xz
+docker-compose-Linux*
