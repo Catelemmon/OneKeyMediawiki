@@ -23,3 +23,11 @@ func TestCommandVersion(t *testing.T) {
 func TestHasFile(t *testing.T) {
 	t.Log(HasFile("/usr/bin", "docker"))
 }
+
+func TestGetIp(t *testing.T) {
+	addrs, err := GetIp()
+	if err != nil{
+		t.Fatalf("Failed to Get IP Addr %v", err)
+	}
+	t.Log(addrs)
+}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"net"
 	"os"
 	exec2 "os/exec"
 	"regexp"
@@ -96,4 +97,20 @@ func FileExist(file string) (error, bool){
 	} else{
 		return err, false
 	}
+}
+
+func GetIp() ([]string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil{
+		return []string{} , nil
+	}
+	strAddrs := make([]string, 0, 5)
+	for _, addr := range addrs{
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback(){
+			if ipnet.IP.To4() != nil{
+				strAddrs = append(strAddrs, ipnet.IP.String())
+			}
+		}
+	}
+	return strAddrs, nil
 }
