@@ -11,6 +11,7 @@ import (
 	"os"
 	exec2 "os/exec"
 	"path"
+	"regexp"
 	"strings"
 )
 
@@ -54,26 +55,27 @@ func InstallWiki(imgDir string, scriptsDir string) error{
 	var composeFile string
 	if utils.VerBEThan("1.10.1", si.DockerComposeVersion){
 		// copy docker compose file v1
-		composeFile = path.Join(scriptsDir, "docker-compose-v1.yml")
+		composeFile = path.Join(scriptsDir, "docker-compose-v1-default.yml")
 
 	} else {
-		composeFile = path.Join(scriptsDir, "docker-compose-v3.yml")
+		composeFile = path.Join(scriptsDir, "docker-compose.yml")
 	}
 	fs, err := ioutil.ReadFile(composeFile)
 	if err != nil {
 		return errors.New("compose file not found")
 	}
-	err = ioutil.WriteFile(path.Join(wikiRoot, "docker-compose.yml"), fs, 0666)
+	err = ioutil.WriteFile(path.Join(wikiRoot, path.Base(composeFile)), fs, 0666)
 	if err != nil {
 		return err
 	}
-	// execute docker compose
+	// init mediawiki
+
 	cmd := exec2.Command("docker-compose", "up", "-d")
 	cmd.Dir = wikiRoot
-	_, err = cmd.Output()
+	out, err := cmd.Output()
 	if err != nil {
 		fmt.Println("启动mediawiki失败")
-		fmt.Printf("err as follow:\n%s\noutput as follow:\n%s")
+		fmt.Printf("err as follow:\n%s\noutput as follow:\n%s", err, string(out))
 		return err
 	}
 	fmt.Println("启动mediawiki成功，请访问本机IP地址或IP地址加上8080...")
@@ -96,12 +98,57 @@ func LoadDockerImage(imgDir string) error{
 				return err
 			}
 		}
+		if strings.HasSuffix(img.Name(), "gz"){
+			cmd := exec2.Command("bash", "-c", "gunzip -c " + img.Name() + " | docker load")
+			cmd.Dir = imgDir
+			out, err := cmd.Output()
+			if err != nil{
+				fmt.Printf("Failed load image file\nerr: %v\noutput:%v\n", err, out)
+				return err
+			}
+		}
 	}
 	return nil
 }
 
-func InitWiki(adminEmail, adminName, adminPassword, dbName, dbUser, dbPassword string)  {
-
+func InitWiki(wikiRoot, adminEmail, adminName, adminPassword, dbName, dbUser, dbPassword string) error {
+	err := RenderEnv(path.Join(wikiRoot, ".env"), adminEmail, "", "", dbName, dbUser, dbPassword, false)
+	if err != nil{
+		return err
+	}
+	err = LaunchWiki(wikiRoot)
+	if err != nil{
+		return err
+	}
+	// install wiki in container
+	cmd := exec2.Command("docker", "exec", "-it", "mediawiki_wiki", "/script/install.sh", adminName, adminPassword)
+	cmd.Dir = wikiRoot
+	out, err := cmd.Output()
+	if err != nil{
+		return err
+	}
+	outs := string(out)
+	secretKey, upgradeKey := "", ""
+	secretPtn := regexp.MustCompile(`\$wgSecretKey=(\w+)`)
+	upgradePtn := regexp.MustCompile(`\$wgUpgradeKey=(\w+)`)
+	matches := secretPtn.FindStringSubmatch(outs)
+	if len(matches) > 0{
+		secretKey = matches[1]
+	} else {
+		fmt.Printf("failed to install wiki, err content is follow: \n%s", out)
+		return errors.New("cannot get secret key")
+	}
+	matches = upgradePtn.FindStringSubmatch(outs)
+	if len(matches) > 0{
+		upgradeKey = matches[1]
+	} else {
+		return errors.New("cannot get upgrade key")
+	}
+	err = RenderEnv(path.Join(wikiRoot, ".env"), "", secretKey, upgradeKey, "", "", "", false)
+	if err != nil{
+		return err
+	}
+	return nil
 }
 
 func RenderEnv(envFile,
@@ -121,9 +168,11 @@ func RenderEnv(envFile,
 	envStore["DB_NAME"] = dbName
 	envStore["DB_USER"] = dbUser
 	envStore["DB_PASSWORD"] = dbPassword
+	envStore["SERVER_HOST"] =
 
 	if err, envExist := utils.FileExist(envFile); err == nil && envExist && !overwrite{
 		envFi, _ := os.Open(envFile)
+		defer envFi.Close()
 		reader := bufio.NewReader(envFi)
 		for true {
 			bl, _, err := reader.ReadLine()
@@ -134,6 +183,8 @@ func RenderEnv(envFile,
 			pieces := strings.Split(line, "=")
 			envName, envValue := pieces[0], pieces[1]
 			envStore[envName] = envValue // add secret key upgrade key
+			envStore["SECRET_KEY"] = secretKey
+			envStore["UPGRADE_KEY"] = upgradeKey
 		}
 	}
 	cntLine := make([]string, 0, 7)
@@ -142,6 +193,7 @@ func RenderEnv(envFile,
 	}
 	envContent := strings.Join(cntLine, "\n")
 	envFi, err := os.OpenFile(envFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	defer envFi.Close()
 	if err != nil{
 		return err
 	}

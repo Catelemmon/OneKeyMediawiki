@@ -1,6 +1,8 @@
 package wikiUtil
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestInstallWiki(t *testing.T) {
 	err := InstallWiki(
@@ -15,5 +17,9 @@ func TestRenderEnv(t *testing.T) {
 	err := RenderEnv("./.env", "1713856662a@gmail.com", "", "", "dbname", "cicada", "09170725", true)
 	if err != nil{
 		t.Logf("Failed to Render Env file")
+	}
+	err = RenderEnv("./.env", "", "dlshdlkshd", "dsdsdsfgdfsgfd", "", "", "", false)
+	if err != nil {
+		t.Logf("failed to Render Env file")
 	}
 }
