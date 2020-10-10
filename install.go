@@ -35,6 +35,18 @@ func main() {
 				os.Exit(3)
 			}
 		}
+		// reinstall docker-compose
+		fmt.Println("是否需要修复docker-compose[Y/n]")
+		var repairDockerCompose string
+		fmt.Scanln(&repairDockerCompose)
+		if strings.TrimSpace(repairDockerCompose) == "Y" || strings.TrimSpace(repairDockerCompose) == "y" ||
+			strings.TrimSpace(repairDockerCompose) == "" {
+			err  = dockerUtil.InstallDockerComposeOldCentos(path.Join(staticsDir, "docker"))
+			if err != nil{
+				fmt.Printf("修复docker-compose失败，错误信息如下\n%v", err)
+				os.Exit(3)
+			}
+		}
 		fmt.Println("正在装载wiki镜像和启动中....")
 		err = wikiUtil.InstallWiki(path.Join(staticsDir, "images"), path.Join(staticsDir, "scripts"))
 		if err != nil {

@@ -39,16 +39,9 @@ func InstallDockerOldCentos(execDir string) error{
 		fmt.Printf("install docker output: %s\n", out)
 		return err
 	}
-	// install docker compose
-	fs, err := ioutil.ReadFile(path.Join(execDir, "docker-compose-Linux-x86_64-1.5.1"))
-	if err != nil {
-		fmt.Println("failed to install docker-compose when reading docker-compose")
-		return err
-	}
-	err = ioutil.WriteFile(path.Join("/usr/bin", "docker-compose"), fs, 0755)
+	err = InstallDockerComposeOldCentos(execDir)
 	if err != nil{
-		fmt.Println("failed to install docker-compose when writing /usr/bin")
-		return  err
+		return err
 	}
 	// launch docker
 	cmd = exec2.Command("service", "docker", "start")
@@ -60,6 +53,21 @@ func InstallDockerOldCentos(execDir string) error{
 		return err
 	}
 	fmt.Println("docker 安装启动完毕")
+	return nil
+}
+
+func InstallDockerComposeOldCentos(execDir string) error{
+	// install docker compose
+	fs, err := ioutil.ReadFile(path.Join(execDir, "docker-compose-Linux-x86_64-1.5.1"))
+	if err != nil {
+		fmt.Println("failed to install docker-compose when reading docker-compose")
+		return err
+	}
+	err = ioutil.WriteFile(path.Join("/usr/bin", "docker-compose"), fs, 0755)
+	if err != nil{
+		fmt.Println("failed to install docker-compose when writing /usr/bin")
+		return  err
+	}
 	return nil
 }
 
