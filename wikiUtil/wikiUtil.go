@@ -30,7 +30,9 @@ func LaunchWiki(wikiRoot string) error {
 		version1Flag = true
 	}
 	if version1Flag{
-		// render version1 compose file
+		// TODO: render version1 compose file
+
+
 	}
 	cmd := exec2.Command("docker-compose",  strings.Split(composeArg, " ")...)
 	cmd.Dir = wikiRoot

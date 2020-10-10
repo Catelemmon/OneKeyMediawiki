@@ -70,6 +70,24 @@ func InstallWiki(imgDir string, scriptsDir string) error{
 	}
 	// init mediawiki
 
+	err = LaunchWiki(wikiRoot)
+	if err != nil{
+		return err
+	}
+	var adminEmail, adminName, adminPassword, dbName, dbUser, dbPassword string
+	fmt.Println("请输入管理员邮箱")
+	fmt.Scanln(&adminEmail)
+	fmt.Println("请输入管理员帐号名")
+	fmt.Scanln(&adminName)
+	fmt.Println("请输入管理员帐号密码")
+	fmt.Scanln(&adminPassword)
+	fmt.Println("请输入数据库名称, 即您希望的数据库标识")
+	fmt.Scanln(&dbName)
+	fmt.Println("请输入数据库用户名")
+	fmt.Scanln(&dbUser)
+	fmt.Println()
+
+
 	cmd := exec2.Command("docker-compose", "up", "-d")
 	cmd.Dir = wikiRoot
 	out, err := cmd.Output()
